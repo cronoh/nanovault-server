@@ -6,6 +6,9 @@ const request = require('request-promise-native');
 const cors = require('cors');
 
 const proxyUrl = `http://172.31.23.38:7076`;
+// const proxyUrl = `http://34.214.36.60:7076`;
+
+const workCache = [];
 
 app.use((req, res, next) => {
   if (req.headers['content-type']) return next();
@@ -45,8 +48,27 @@ app.post('/api/node-api', (req, res) => {
   if (!req.body.action || allowedActions.indexOf(req.body.action) === -1) {
     return res.status(500).json({ error: `Action ${req.body.action} not allowed` });
   }
+
+  let workRequest = false;
+  if (req.body.action === 'work_generate') {
+    if (!req.body.hash) return res.status(500).json({ error: `Requires valid hash to perform work` });
+    const existingHash = workCache.find(w => w.hash === req.body.hash);
+    if (existingHash) {
+      return res.json({ work: existingHash.work });
+    }
+    workRequest = true;
+  }
   request({ method: 'post', uri: proxyUrl, body: req.body, json: true })
-    .then(proxyRes => res.json(proxyRes))
+    .then(proxyRes => {
+      if (workRequest && proxyRes && proxyRes.work) {
+        workCache.push({ hash: req.body.hash, work: proxyRes.work });
+        // If the list is too long, prune it.
+        if (workCache.length >= 800) {
+          workCache.shift();
+        }
+      }
+      res.json(proxyRes)
+    })
     .catch(err => res.status(500).json(err.toString()));
 });
 
