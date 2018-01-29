@@ -1,7 +1,6 @@
 const express = require('express');
 
 const app = express();
-const parser = require('body-parser');
 const request = require('request-promise-native');
 const cors = require('cors');
 
