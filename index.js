@@ -9,22 +9,8 @@ const proxyUrl = `http://172.31.23.38:7076`;
 
 const workCache = [];
 
-app.use((req, res, next) => {
-  if (req.headers['content-type']) return next();
-  req.headers['content-type'] = 'application/json';
-  next();
-});
 app.use(cors());
 app.use(express.json());
-
-app.post('/api/new-block', (req, res) => {
-  const fullBlock = req.body;
-  fullBlock.block = JSON.parse(fullBlock.block);
-
-  console.log(`Got new block: `, fullBlock);
-
-  res.send(200);
-});
 
 app.post('/api/node-api', (req, res) => {
   const allowedActions = [
