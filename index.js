@@ -73,9 +73,6 @@ app.post('/api/node-api', (req, res) => {
 
 app.use(express.static('static'));
 
-app.get('/*', (req, res) => {
-  console.log(`${__dirname}/static/index.html`);
-  res.sendFile(`${__dirname}/static/index.html`)
-});
+app.get('/*', (req, res) => res.sendFile(`${__dirname}/static/index.html`));
 
 app.listen(9950, () => console.log(`App listening!`));
