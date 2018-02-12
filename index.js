@@ -1,12 +1,10 @@
 const express = require('express');
-
-const app = express();
 const request = require('request-promise-native');
 const cors = require('cors');
 
-const proxyUrl = `http://172.31.23.38:7076`;
-// const proxyUrl = `http://34.214.36.60:7076`;
+const app = express();
 
+const proxyUrl = `http://172.31.23.38:7076`;
 const workCache = [];
 
 app.use(cors());
