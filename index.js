@@ -12,21 +12,18 @@ app.use(express.json());
 
 app.post('/api/node-api', (req, res) => {
   const allowedActions = [
+    'account_history',
+    'account_info',
     'accounts_frontiers',
     'accounts_balances',
     'accounts_pending',
-    'work_generate',
-    'process',
-    'account_history',
-    'account_info',
-    'validate_account_number',
+    'block',
+    'blocks',
+    'blocks_info',
     'pending',
-    'krai_to_raw',
-    'krai_from_raw',
-    'mrai_to_raw',
-    'mrai_from_raw',
-    'rai_to_raw',
-    'rai_from_raw',
+    'process',
+    'validate_account_number',
+    'work_generate',
   ];
   if (!req.body.action || allowedActions.indexOf(req.body.action) === -1) {
     return res.status(500).json({ error: `Action ${req.body.action} not allowed` });
