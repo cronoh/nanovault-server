@@ -35,27 +35,27 @@ app.post('/api/node-api', (req, res) => {
   let workRequest = false;
   if (req.body.action === 'work_generate') {
     if (!req.body.hash) return res.status(500).json({ error: `Requires valid hash to perform work` });
-    const cachedWork = cacheClient.get(req.body.hash);
-    if (cachedWork && cachedWork.length) {
-      return res.json({ work: cachedWork });
-    }
-    // const existingHash = workCache.find(w => w.hash === req.body.hash);
-    // if (existingHash) {
-    //   return res.json({ work: existingHash.work });
+    // const cachedWork = cacheClient.get(req.body.hash);
+    // if (cachedWork && cachedWork.length) {
+    //   return res.json({ work: cachedWork });
     // }
+    const existingHash = workCache.find(w => w.hash === req.body.hash);
+    if (existingHash) {
+      return res.json({ work: existingHash.work });
+    }
     workRequest = true;
   }
   request({ method: 'post', uri: proxyUrl, body: req.body, json: true })
     .then(proxyRes => {
       if (workRequest && proxyRes && proxyRes.work) {
 
-        cacheClient.set(req.body.hash, proxyRes.work, 'EX', 60 * 60 * 24); // Store the work for 24 hours
+        // cacheClient.set(req.body.hash, proxyRes.work, 'EX', 60 * 60 * 24); // Store the work for 24 hours
 
-        // workCache.push({ hash: req.body.hash, work: proxyRes.work });
+        workCache.push({ hash: req.body.hash, work: proxyRes.work });
         // If the list is too long, prune it.
-        // if (workCache.length >= 800) {
-        //   workCache.shift();
-        // }
+        if (workCache.length >= 800) {
+          workCache.shift();
+        }
       }
       res.json(proxyRes)
     })
