@@ -15,6 +15,7 @@
     "express": "^4.16.2",
     "knex": "^0.14.2",
     "pg": "^7.4.1",
+    "redis": "^2.8.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5"
   }
