@@ -1,19 +1,21 @@
 const express = require('express');
 const request = require('request-promise-native');
 const cors = require('cors');
+const { promisify } = require('util');
 const cacheClient = require('redis').createClient({
   host: `172.31.23.61`,
 });
 
+const getCache = promisify(cacheClient.get).bind(cacheClient);
+
 const app = express();
 
 const proxyUrl = `http://172.31.23.38:7076`;
-const workCache = [];
 
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/node-api', (req, res) => {
+app.post('/api/node-api', async (req, res) => {
   const allowedActions = [
     'account_history',
     'account_info',
@@ -35,27 +37,18 @@ app.post('/api/node-api', (req, res) => {
   let workRequest = false;
   if (req.body.action === 'work_generate') {
     if (!req.body.hash) return res.status(500).json({ error: `Requires valid hash to perform work` });
-    // const cachedWork = cacheClient.get(req.body.hash);
-    // if (cachedWork && cachedWork.length) {
-    //   return res.json({ work: cachedWork });
-    // }
-    const existingHash = workCache.find(w => w.hash === req.body.hash);
-    if (existingHash) {
-      return res.json({ work: existingHash.work });
+
+    // Check the cache for work
+    const cachedWork = await getCache(req.body.hash);
+    if (cachedWork && cachedWork.length) {
+      return res.json({ work: cachedWork });
     }
     workRequest = true;
   }
   request({ method: 'post', uri: proxyUrl, body: req.body, json: true })
     .then(proxyRes => {
       if (workRequest && proxyRes && proxyRes.work) {
-
-        // cacheClient.set(req.body.hash, proxyRes.work, 'EX', 60 * 60 * 24); // Store the work for 24 hours
-
-        workCache.push({ hash: req.body.hash, work: proxyRes.work });
-        // If the list is too long, prune it.
-        if (workCache.length >= 800) {
-          workCache.shift();
-        }
+        cacheClient.set(req.body.hash, proxyRes.work, 'EX', 60 * 60 * 24); // Store the work for 24 hours
       }
       res.json(proxyRes)
     })
