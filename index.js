@@ -1,5 +1,6 @@
 /** Configuration **/
 const nanoNodeUrl = `http://172.31.23.38:7076`; // Nano node RPC url
+const nanoWorkNodeUrl = `http://74.82.30.7:7076`; // Nano work node RPC url
 const listeningPort = 9950; // Port this app will listen on
 
 const useRedisCache = true; // Change this if you are not running a Redis server.  Will use in memory cache instead.
@@ -57,7 +58,7 @@ app.post('/api/node-api', async (req, res) => {
   }
 
   // Send the request to the Nano node and return the response
-  request({ method: 'post', uri: nanoNodeUrl, body: req.body, json: true })
+  request({ method: 'post', uri: workRequest ? nanoWorkNodeUrl : nanoNodeUrl, body: req.body, json: true })
     .then(proxyRes => {
       if (workRequest && proxyRes && proxyRes.work) {
         putCache(req.body.hash, proxyRes.work);
