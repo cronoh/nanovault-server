@@ -4,7 +4,7 @@ const nanoWorkNodeUrl = `http://74.82.30.7:7076`; // Nano work node RPC url
 const listeningPort = 9950; // Port this app will listen on
 
 const useRedisCache = true; // Change this if you are not running a Redis server.  Will use in memory cache instead.
-const redisCacheUrl = `172.31.23.61`; // Url to the redis server (If used)
+const redisCacheUrl = `172.31.25.214`; // Url to the redis server (If used)
 const redisCacheTime = 60 * 60 * 24; // Store work for 24 Hours
 const memoryCacheLength = 800; // How much work to store in memory (If used)
 
