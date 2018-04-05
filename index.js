@@ -37,6 +37,7 @@ app.post('/api/node-api', async (req, res) => {
     'blocks',
     'block_count',
     'blocks_info',
+    'delegators_count',
     'pending',
     'process',
     'validate_account_number',
