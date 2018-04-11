@@ -40,6 +40,7 @@ app.post('/api/node-api', async (req, res) => {
     'delegators_count',
     'pending',
     'process',
+    'representatives_online',
     'validate_account_number',
     'work_generate',
   ];
@@ -48,10 +49,13 @@ app.post('/api/node-api', async (req, res) => {
   }
 
   let workRequest = false;
+  let representativeRequest = false;
+  let repCacheKey = `online-representatives`;
+
+  // Cache work requests
   if (req.body.action === 'work_generate') {
     if (!req.body.hash) return res.status(500).json({ error: `Requires valid hash to perform work` });
 
-    // Check the cache for work
     const cachedWork = useRedisCache ? await getCache(req.body.hash) : getCache(req.body.hash); // Only redis is an async operation
     if (cachedWork && cachedWork.length) {
       return res.json({ work: cachedWork });
@@ -59,11 +63,25 @@ app.post('/api/node-api', async (req, res) => {
     workRequest = true;
   }
 
+  // Cache the online representatives request
+  if (req.body.action === 'representatives_online') {
+    const cachedValue = useRedisCache ? await getCache(repCacheKey) : getCache(repCacheKey); // Only redis is an async operation
+    if (cachedValue && cachedValue.length) {
+      return res.json(cachedValue);
+    }
+    representativeRequest = true;
+  }
+
   // Send the request to the Nano node and return the response
-  request({ method: 'post', uri: workRequest ? nanoWorkNodeUrl : nanoNodeUrl, body: req.body, json: true })
+  request({ method: 'post', uri: (workRequest || representativeRequest) ? nanoWorkNodeUrl : nanoNodeUrl, body: req.body, json: true })
     .then(proxyRes => {
-      if (workRequest && proxyRes && proxyRes.work) {
-        putCache(req.body.hash, proxyRes.work);
+      if (proxyRes) {
+        if (workRequest && proxyRes.work) {
+          putCache(req.body.hash, proxyRes.work);
+        }
+        if (representativeRequest && proxyRes.representatives) {
+          putCache(repCacheKey, proxyRes, 5 * 60); // Cache online representatives for 5 minutes
+        }
       }
       res.json(proxyRes)
     })
@@ -82,15 +100,16 @@ if (useRedisCache) {
   cacheClient.on('end', () => console.log(`Redis Work Cache: Connection closed`));
 
   getCache = promisify(cacheClient.get).bind(cacheClient);
-  putCache = (hash, work) => {
-    cacheClient.set(hash, work, 'EX', redisCacheTime); // Store the work for 24 hours
+  putCache = (hash, work, time) => {
+    cacheClient.set(hash, work, 'EX', time || redisCacheTime); // Store the work for 24 hours
   };
 } else {
   getCache = hash => {
     const existingHash = workCache.find(w => w.hash === hash);
     return existingHash ? existingHash.work : null;
   };
-  putCache = (hash, work) => {
+  putCache = (hash, work, time) => {
+    if (time) return; // If a specific time is specified, don't cache at all for now
     workCache.push({ hash, work });
     if (workCache.length >= memoryCacheLength) workCache.shift(); // If the list is too long, prune it.
   };
