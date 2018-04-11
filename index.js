@@ -67,7 +67,7 @@ app.post('/api/node-api', async (req, res) => {
   if (req.body.action === 'representatives_online') {
     const cachedValue = useRedisCache ? await getCache(repCacheKey) : getCache(repCacheKey); // Only redis is an async operation
     if (cachedValue && cachedValue.length) {
-      return res.json(cachedValue);
+      return res.json(JSON.parse(cachedValue));
     }
     representativeRequest = true;
   }
@@ -80,7 +80,7 @@ app.post('/api/node-api', async (req, res) => {
           putCache(req.body.hash, proxyRes.work);
         }
         if (representativeRequest && proxyRes.representatives) {
-          putCache(repCacheKey, proxyRes, 5 * 60); // Cache online representatives for 5 minutes
+          putCache(repCacheKey, JSON.stringify(proxyRes), 5 * 60); // Cache online representatives for 5 minutes
         }
       }
       res.json(proxyRes)
