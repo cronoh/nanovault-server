@@ -1,5 +1,5 @@
 /** Configuration **/
-const nanoNodeUrl = `http://172.31.7.100:7076`; // Nano node RPC url
+const nanoNodeUrl = `http://74.82.30.7:7076`; // Nano node RPC url
 const nanoWorkNodeUrl = `http://74.82.30.7:7076`; // Nano work node RPC url
 const listeningPort = 9950; // Port this app will listen on
 
