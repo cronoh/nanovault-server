@@ -1,10 +1,14 @@
-/** Configuration **/
-const nanoNodeUrl = `http://172.31.7.100:7076`; // Nano node RPC url
-const nanoWorkNodeUrl = `http://74.82.30.7:7076`; // Nano work node RPC url
-const listeningPort = 9950; // Port this app will listen on
+require('dotenv').config(); // Load variables from .env into the environment
 
-const useRedisCache = true; // Change this if you are not running a Redis server.  Will use in memory cache instead.
-const redisCacheUrl = `172.31.25.214`; // Url to the redis server (If used)
+const timestamps = require('./timestamps');
+
+/** Configuration **/
+const nanoNodeUrl = process.env.NANO_NODE_URL || `http://172.31.7.100:7076`; // Nano node RPC url
+const nanoWorkNodeUrl = process.env.NANO_WORK_NODE_URL || `http://74.82.30.7:7076`; // Nano work node RPC url
+const listeningPort = process.env.APP_PORT || 9950; // Port this app will listen on
+
+const useRedisCache = !!process.env.USE_REDIS || true; // Change this if you are not running a Redis server.  Will use in memory cache instead.
+const redisCacheUrl = process.env.REDIS_HOST || `172.31.25.214`; // Url to the redis server (If used)
 const redisCacheTime = 60 * 60 * 24; // Store work for 24 Hours
 const memoryCacheLength = 800; // How much work to store in memory (If used)
 
@@ -74,13 +78,38 @@ app.post('/api/node-api', async (req, res) => {
 
   // Send the request to the Nano node and return the response
   request({ method: 'post', uri: (workRequest || representativeRequest) ? nanoWorkNodeUrl : nanoNodeUrl, body: req.body, json: true })
-    .then(proxyRes => {
+    .then(async (proxyRes) => {
       if (proxyRes) {
         if (workRequest && proxyRes.work) {
           putCache(req.body.hash, proxyRes.work);
         }
         if (representativeRequest && proxyRes.representatives) {
           putCache(repCacheKey, JSON.stringify(proxyRes), 5 * 60); // Cache online representatives for 5 minutes
+        }
+      }
+
+      if (req.body.action === 'account_history') {
+        const hashes = proxyRes.history.map(tx => tx.hash);
+
+        try {
+          const txHashes = await timestamps.getTimestamps(hashes);
+          // Loop and modify
+          const timestampedHistory = proxyRes.history.map(tx => {
+            tx.timestamp = txHashes[tx.hash];
+            return tx;
+          });
+          proxyRes.history = timestampedHistory;
+        } catch (err) {
+        }
+
+      }
+
+      if (req.body.action === 'blocks_info') {
+        const blockHashes = req.body.hashes;
+        const txHashes = await timestamps.getTimestamps(blockHashes);
+        // Loop through transactions, attach timestamp
+        for (let block in proxyRes.blocks) {
+          proxyRes.blocks[block].timestamp = txHashes[block] || null;
         }
       }
       res.json(proxyRes)
