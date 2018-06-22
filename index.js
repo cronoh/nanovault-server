@@ -88,29 +88,15 @@ app.post('/api/node-api', async (req, res) => {
         }
       }
 
+      // Add timestamps to certain requests
       if (req.body.action === 'account_history') {
-        const hashes = proxyRes.history.map(tx => tx.hash);
-
-        try {
-          const txHashes = await timestamps.getTimestamps(hashes);
-          // Loop and modify
-          const timestampedHistory = proxyRes.history.map(tx => {
-            tx.timestamp = txHashes[tx.hash];
-            return tx;
-          });
-          proxyRes.history = timestampedHistory;
-        } catch (err) {
-        }
-
+        proxyRes = await timestamps.mapAccountHistory(proxyRes);
       }
-
       if (req.body.action === 'blocks_info') {
-        const blockHashes = req.body.hashes;
-        const txHashes = await timestamps.getTimestamps(blockHashes);
-        // Loop through transactions, attach timestamp
-        for (let block in proxyRes.blocks) {
-          proxyRes.blocks[block].timestamp = txHashes[block] || null;
-        }
+        proxyRes = await timestamps.mapBlocksInfo(req.body.hashes, proxyRes);
+      }
+      if (req.body.action === 'pending') {
+        proxyRes = await timestamps.mapPending(proxyRes);
       }
       res.json(proxyRes)
     })
