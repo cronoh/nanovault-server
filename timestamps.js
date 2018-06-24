@@ -25,6 +25,7 @@ async function getTimestamps(hashes) {
  * Morph the normal Nano node responses to include timestamps
  */
 async function mapAccountHistory(nodeResult) {
+  if (!nodeResult || !nodeResult.history) return nodeResult;
   const hashes = nodeResult.history.map(tx => tx.hash);
   const txHashes = await getTimestamps(hashes);
 
@@ -37,6 +38,7 @@ async function mapAccountHistory(nodeResult) {
 }
 
 async function mapBlocksInfo(blockHashes, nodeResult) {
+  if (!nodeResult || !nodeResult.blocks) return nodeResult;
   const txHashes = await getTimestamps(blockHashes);
 
   for (let block in nodeResult.blocks) {
@@ -47,6 +49,7 @@ async function mapBlocksInfo(blockHashes, nodeResult) {
 }
 
 async function mapPending(nodeResult) {
+  if (!nodeResult || !nodeResult.blocks) return nodeResult;
   const pendingHashes = [];
   for (let block in nodeResult.blocks) {
     pendingHashes.push(block);
