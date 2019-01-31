@@ -54,10 +54,18 @@ app.post('/api/node-api', async (req, res) => {
 
   let workRequest = false;
   let representativeRequest = false;
+  let nodeOverride = false; // When overriding the node, we don't want to use caching (Someone could inject bad data)
+  let nodeUrl = nanoNodeUrl;
   let repCacheKey = `online-representatives`;
 
+  // Check for a node override being used
+  if (req.query && req.query.node && req.query.node.length > 4) {
+    nodeUrl = req.query.node;
+    nodeOverride = true;
+  }
+
   // Cache work requests
-  if (req.body.action === 'work_generate') {
+  if (req.body.action === 'work_generate' && !nodeOverride) {
     if (!req.body.hash) return res.status(500).json({ error: `Requires valid hash to perform work` });
 
     const cachedWork = useRedisCache ? await getCache(req.body.hash) : getCache(req.body.hash); // Only redis is an async operation
@@ -68,7 +76,7 @@ app.post('/api/node-api', async (req, res) => {
   }
 
   // Cache the online representatives request
-  if (req.body.action === 'representatives_online') {
+  if (req.body.action === 'representatives_online' && !nodeOverride) {
     const cachedValue = useRedisCache ? await getCache(repCacheKey) : getCache(repCacheKey); // Only redis is an async operation
     if (cachedValue && cachedValue.length) {
       return res.json(JSON.parse(cachedValue));
@@ -76,10 +84,15 @@ app.post('/api/node-api', async (req, res) => {
     representativeRequest = true;
   }
 
+  // Determine if this should go to the work node instead
+  if ((workRequest || representativeRequest) && !nodeOverride) {
+    nodeUrl = nanoWorkNodeUrl;
+  }
+
   // Send the request to the Nano node and return the response
-  request({ method: 'post', uri: (workRequest || representativeRequest) ? nanoWorkNodeUrl : nanoNodeUrl, body: req.body, json: true })
+  request({ method: 'post', uri: nodeUrl, body: req.body, json: true })
     .then(async (proxyRes) => {
-      if (proxyRes) {
+      if (proxyRes && !nodeOverride) {
         if (workRequest && proxyRes.work) {
           putCache(req.body.hash, proxyRes.work);
         }
