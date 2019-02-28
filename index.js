@@ -7,6 +7,8 @@ const nanoNodeUrl = process.env.NANO_NODE_URL || `http://172.31.7.100:7076`; // 
 const nanoWorkNodeUrl = process.env.NANO_WORK_NODE_URL || `http://74.82.30.7:7076`; // Nano work node RPC url
 const listeningPort = process.env.APP_PORT || 9950; // Port this app will listen on
 
+const useDPoW = !!process.env.USE_DPOW || false; // Is the Distributed Proof of Work system used? (Requires API Key)
+
 const useRedisCache = !!process.env.USE_REDIS || true; // Change this if you are not running a Redis server.  Will use in memory cache instead.
 const redisCacheUrl = process.env.REDIS_HOST || `172.31.25.214`; // Url to the redis server (If used)
 const redisCacheTime = 60 * 60 * 24; // Store work for 24 Hours
@@ -87,6 +89,23 @@ app.post('/api/node-api', async (req, res) => {
   // Determine if this should go to the work node instead
   if ((workRequest || representativeRequest) && !nodeOverride) {
     nodeUrl = nanoWorkNodeUrl;
+  }
+
+  // Determine if we use DPoW instead of proxying to the nano node
+  if (workRequest && useDPoW) {
+    return request({
+      method: 'post',
+      uri: process.env.DPOW_URL,
+      json: true,
+      body: { hash: req.body.hash, key: process.env.DPOW_KEY }
+    })
+      .then(async (res) => {
+        if (res && res.work) {
+          putCache(req.body.hash, res.work);
+        }
+        res.json(res)
+      })
+      .catch(err => res.status(500).json(err.toString()));
   }
 
   // Send the request to the Nano node and return the response
