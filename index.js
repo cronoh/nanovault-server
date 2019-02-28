@@ -99,11 +99,11 @@ app.post('/api/node-api', async (req, res) => {
       json: true,
       body: { hash: req.body.hash, key: process.env.DPOW_KEY }
     })
-      .then(async (res) => {
-        if (res && res.work) {
-          putCache(req.body.hash, res.work);
+      .then(async (dpowRes) => {
+        if (dpowRes && dpowRes.work) {
+          putCache(req.body.hash, dpowRes.work);
         }
-        res.json(res)
+        res.json(dpowRes)
       })
       .catch(err => res.status(500).json(err.toString()));
   }
