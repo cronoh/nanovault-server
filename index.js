@@ -106,7 +106,12 @@ app.post('/api/node-api', async (req, res) => {
       method: 'post',
       uri: process.env.DPOW_URL,
       json: true,
-      body: { hash: req.body.hash, key: process.env.DPOW_KEY }
+      body: {
+        user: process.env.DPOW_USER,
+        api_key: process.env.DPOW_KEY,
+        hash: req.body.hash,
+        timeout: 10,
+      }
     })
       .then(async (dpowRes) => {
         if (dpowRes && dpowRes.work) {
