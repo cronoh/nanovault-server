@@ -40,6 +40,16 @@ app.get('/api/recommended-representatives', async (req, res) => {
   }
 });
 
+// Allow requests to price
+app.get('/api/price', async (req, res) => {
+  const price = await getCache('price');
+  if (price) {
+    return res.json(JSON.parse(price));
+  } else {
+    return await getPrice();
+  }
+});
+
 // Allow certain requests to the Nano RPC and cache work requests
 app.post('/api/node-api', async (req, res) => {
   const allowedActions = [
@@ -191,10 +201,26 @@ function getRecommendedReps() {
   });
 }
 
-// Recache the recommended reps every 15 minutes
-function pollRecommended() {
-  getRecommendedReps();
-  setInterval(getRecommendedReps, 15 * 60 * 1000);
+function getPrice() {
+  return request({
+    method: 'get',
+    uri: `https://api.coinmarketcap.com/v1/ticker/nano/`,
+    json: true,
+  }).then(res => {
+    putCache('price', JSON.stringify(res), 45 * 60); // Store for 45 minutes
+
+    return res;
+  });
 }
 
-pollRecommended();
+function pollThirdParty() {
+  getRecommendedReps();
+  // Recache the recommended reps every 15 minutes
+  setInterval(getRecommendedReps, 15 * 60 * 1000); 
+
+  getPrice();
+  // update the price every 5 minutes
+  setInterval(getPrice, 5 * 60 * 1000);
+}
+
+pollThirdParty();
